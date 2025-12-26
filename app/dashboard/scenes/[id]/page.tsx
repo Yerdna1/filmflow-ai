@@ -45,14 +45,15 @@ async function getScene(sceneId: string, userId: string) {
   return scene
 }
 
-export default async function SceneDetailPage({ params }: { params: { id: string } }) {
+export default async function SceneDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   
   if (!session?.user) {
     redirect('/login')
   }
 
-  const scene = await getScene(params.id, session.user.id)
+  const { id } = await params
+  const scene = await getScene(id, session.user.id)
 
   if (!scene) {
     return (

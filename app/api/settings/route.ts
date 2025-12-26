@@ -8,7 +8,7 @@ import { db } from '@/lib/db'
 import { auth } from '@/lib/auth'
 
 // Available models configuration
-export const AVAILABLE_MODELS = {
+const AVAILABLE_MODELS = {
   image: [
     { id: 'flux-schnell', name: 'Flux Schnell', provider: 'replicate', description: 'Rýchly, kvalitný (Replicate)', speed: 'fast' },
     { id: 'flux-pro', name: 'Flux Pro', provider: 'replicate', description: 'Najvyššia kvalita (Replicate)', speed: 'slow' },

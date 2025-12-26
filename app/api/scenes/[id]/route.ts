@@ -17,7 +17,7 @@ const updateSceneSchema = z.object({
 // GET - Get single scene
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -28,8 +28,10 @@ export async function GET(
       )
     }
 
+    const { id } = await params
+
     const scene = await db.scene.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         sceneActors: {
           include: {
@@ -75,7 +77,7 @@ export async function GET(
 // PUT - Update scene
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -86,9 +88,11 @@ export async function PUT(
       )
     }
 
+    const { id } = await params
+
     // Check if scene exists and user owns it
     const existingScene = await db.scene.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingScene) {
@@ -124,7 +128,7 @@ export async function PUT(
 
     // Update scene
     const scene = await db.scene.update({
-      where: { id: params.id },
+      where: { id },
       data: validation.data,
       include: {
         sceneActors: {
@@ -151,7 +155,7 @@ export async function PUT(
 // DELETE - Delete scene
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -162,9 +166,11 @@ export async function DELETE(
       )
     }
 
+    const { id } = await params
+
     // Check if scene exists and user owns it
     const existingScene = await db.scene.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingScene) {
@@ -183,7 +189,7 @@ export async function DELETE(
 
     // Delete scene (cascade delete will handle related records)
     await db.scene.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ success: true, message: 'Scéna bola odstránená' })

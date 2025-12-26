@@ -39,15 +39,17 @@ async function getAllActors(userId: string) {
   })
 }
 
-export default async function EditScenePage({ params }: { params: { id: string } }) {
+export default async function EditScenePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   
   if (!session?.user) {
     redirect('/login')
   }
 
+  const { id } = await params
+
   const [scene, allActors] = await Promise.all([
-    getScene(params.id, session.user.id),
+    getScene(id, session.user.id),
     getAllActors(session.user.id),
   ])
 
