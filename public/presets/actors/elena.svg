@@ -1,0 +1,7 @@
+<svg width="300" height="300" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="300" height="300" fill="#FF6B6B"/>
+  <circle cx="150" cy="130" r="60" fill="#F5D6C6"/>
+  <path d="M70 300C70 240 100 170 150 170C200 170 230 240 230 300H70Z" fill="#F5D6C6"/>
+  <text x="150" y="140" text-anchor="middle" fill="white" font-size="48" font-weight="bold">EL</text>
+  <text x="150" y="270" text-anchor="middle" fill="#F5D6C6" font-size="16">ELENA</text>
+</svg>

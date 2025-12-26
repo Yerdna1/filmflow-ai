@@ -1,0 +1,380 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTHENTICATION (NextAuth.js)
+// ============================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// USER & SUBSCRIPTION
+// ============================================
+
+enum SubscriptionPlan {
+  FREE
+  INDIE
+  PRO
+  STUDIO
+}
+
+model User {
+  id            String           @id @default(cuid())
+  name          String?
+  email         String?          @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?          // For credentials login
+  plan          SubscriptionPlan @default(FREE)
+  stripeId      String?          @unique
+
+  accounts      Account[]
+  sessions      Session[]
+  projects      Project[]
+  actors        Actor[]
+  scenes        Scene[]
+  generations   Generation[]
+  apiUsage      ApiUsage[]
+  subscription  Subscription?
+  settings      UserSettings?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// USER SETTINGS (API Keys & Model Preferences)
+// ============================================
+
+model UserSettings {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // API Keys (encrypted in production)
+  openaiApiKey      String?  // OpenAI (GPT, DALL-E)
+  anthropicApiKey   String?  // Claude
+  replicateApiKey   String?  // Replicate (Flux, SDXL)
+  stabilityApiKey   String?  // Stability AI
+  elevenLabsApiKey  String?  // ElevenLabs TTS
+  sunoApiKey        String?  // Suno Music
+  higgsfieldApiKey  String?  // Higgsfield Video
+  runwayApiKey      String?  // Runway ML
+  pikaApiKey        String?  // Pika Labs
+  lumaApiKey        String?  // Luma AI
+  falApiKey         String?  // Fal.ai
+
+  // Model Preferences for different tasks
+  imageModel        String   @default("flux-schnell")     // flux-schnell, flux-pro, sdxl, dall-e-3
+  dialogueLlmModel  String   @default("gpt-4o-mini")      // gpt-4o, gpt-4o-mini, claude-3-sonnet, claude-3-haiku
+  storyLlmModel     String   @default("gpt-4o")           // For story/script generation
+  voiceModel        String   @default("elevenlabs-turbo") // elevenlabs-turbo, elevenlabs-v2
+  musicModel        String   @default("suno-v3")          // suno-v3, suno-v4
+  videoModel        String   @default("higgsfield")       // higgsfield, runway-gen3, pika, luma
+
+  // Generation preferences
+  defaultImageStyle    String?  // cinematic, realistic, artistic
+  defaultAspectRatio   String   @default("16:9")
+  defaultVideoLength   Int      @default(5)  // seconds
+  preferSlovakOutput   Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subscription {
+  id                   String           @id @default(cuid())
+  userId               String           @unique
+  stripeSubscriptionId String           @unique
+  stripePriceId        String
+  plan                 SubscriptionPlan
+  status               String
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// PROJECTS
+// ============================================
+
+model Project {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenes Scene[]
+  actors Actor[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// ACTORS
+// ============================================
+
+enum ActorType {
+  MAIN
+  SUPPORTING
+  PRESET
+}
+
+model Actor {
+  id          String    @id @default(cuid())
+  name        String
+  type        ActorType
+  age         Int?
+  gender      String?
+  description String?   @db.Text
+  backstory   String?   @db.Text
+  imageUrl    String?
+  voiceId     String?   // ElevenLabs voice ID
+
+  userId    String?
+  projectId String?
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  sceneActors SceneActor[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([type])
+}
+
+// ============================================
+// SCENES
+// ============================================
+
+enum SceneType {
+  DIALOGUE
+  ACTION
+  EMOTIONAL
+  TRANSITION
+  ESTABLISHING
+}
+
+model Scene {
+  id          String    @id @default(cuid())
+  title       String
+  description String?   @db.Text
+  type        SceneType @default(DIALOGUE)
+  location    String?
+  timeOfDay   String?
+  mood        String?
+  duration    Int?      @default(30) // seconds
+  order       Int       @default(0)
+
+  userId    String?
+  projectId String?
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  sceneActors   SceneActor[]
+  dialogueLines DialogueLine[]
+  generations   Generation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+}
+
+model SceneActor {
+  id      String @id @default(cuid())
+  sceneId String
+  actorId String
+
+  scene Scene @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  actor Actor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@unique([sceneId, actorId])
+}
+
+model DialogueLine {
+  id      String @id @default(cuid())
+  sceneId String
+  actorId String
+  text    String @db.Text
+  order   Int    @default(0)
+
+  // Generated audio
+  audioUrl String?
+
+  scene Scene @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sceneId])
+}
+
+// ============================================
+// AI GENERATIONS
+// ============================================
+
+enum GenerationType {
+  IMAGE
+  VIDEO
+  AUDIO
+  MUSIC
+}
+
+enum GenerationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Generation {
+  id       String           @id @default(cuid())
+  type     GenerationType
+  status   GenerationStatus @default(PENDING)
+  model    String
+  prompt   String           @db.Text
+  settings Json?
+
+  // Results
+  outputUrl   String?
+  thumbnailUrl String?
+  duration    Int?    // for video/audio in seconds
+  metadata    Json?
+
+  // Error info
+  errorMessage String?
+
+  userId  String
+  sceneId String?
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scene Scene? @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  @@index([userId])
+  @@index([sceneId])
+  @@index([status])
+  @@index([type])
+}
+
+// ============================================
+// API USAGE TRACKING (Free Tier)
+// ============================================
+
+model ApiUsage {
+  id      String @id @default(cuid())
+  userId  String
+  service String // higgsfield, elevenlabs, suno, modal
+  period  String // YYYY-MM-DD for daily, YYYY-MM for monthly
+  count   Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, service, period])
+  @@index([userId])
+  @@index([service])
+}
+
+// ============================================
+// CAMERA MOVEMENTS (Preset Library)
+// ============================================
+
+model CameraMovement {
+  id            String @id @default(cuid())
+  name          String
+  nameSk        String
+  category      String
+  description   String
+  descriptionSk String
+  prompt        String @db.Text
+  dramaticUse   String
+  emotionalEffect String
+  previewUrl    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+// ============================================
+// PRESET SCENES (Library)
+// ============================================
+
+model PresetScene {
+  id          String    @id @default(cuid())
+  title       String
+  titleSk     String
+  description String    @db.Text
+  descriptionSk String  @db.Text
+  type        SceneType
+  location    String?
+  mood        String?
+  dialogue    Json?     // Array of dialogue lines
+  category    String    // romantic, dramatic, action, etc.
+  tags        String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([type])
+}

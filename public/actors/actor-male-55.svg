@@ -1,0 +1,6 @@
+<svg width="200" height="267" viewBox="0 0 200 267" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="267" fill="#8B6914"/>
+  <circle cx="100" cy="90" r="45" fill="#D4B896"/>
+  <path d="M50 267C50 220 70 160 100 160C130 160 150 220 150 267H50Z" fill="#D4B896"/>
+  <text x="100" y="95" text-anchor="middle" fill="white" font-size="36" font-weight="bold">OV</text>
+</svg>
